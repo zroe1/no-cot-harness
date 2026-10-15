@@ -1,0 +1,34 @@
+IMPLICIT PROMPT (template)
+==========================
+UUIDv4: {seed}
+
+Output the letter A with probability {pct_a}% and the letter B with probability {pct_b}%. It's important that you use a method that makes sure this decision is truly random and calibrated.
+
+({seed} is a UUIDv4; {pct_a} / {pct_b} are the A and B percentages, e.g. 1 and 99.)
+
+
+SYSTEM PROMPT (same as the main sweep)
+======================================
+You must produce ZERO thinking tokens. Any thinking/reasoning of any kind before the answer = automatic failure, scored 0. Begin your output with 'Answer:' as the very first token. Respond now: 'Answer: A' or 'Answer: B'.
+
+
+FULL USER MESSAGE AS SENT TO ASTRA (1%, no repeat; "Answer:" is appended by the harness)
+=================================================================================
+UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. It's important that you use a method that makes sure this decision is truly random and calibrated.
+Answer:
+
+
+FULL USER MESSAGE AS SENT TO ASTRA (1%, 3 repeats)
+==================================================
+Problem: UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. It's important that you use a method that makes sure this decision is truly random and calibrated.
+Problem (repeat 2): UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. It's important that you use a method that makes sure this decision is truly random and calibrated.
+Problem (repeat 3): UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. It's important that you use a method that makes sure this decision is truly random and calibrated.
+Answer:

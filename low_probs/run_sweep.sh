@@ -8,11 +8,12 @@
 #   YES=1 bash low_probs/run_sweep.sh                   # skip the confirmation prompt
 #
 # Run from an activated env (`conda activate xlab`), not `conda run`, which misparses --n-style
-# flags. Needs OPENROUTER_API_KEY (Astra, Jev) and ANTHROPIC_API_KEY (Fable). Plot with
+# flags. Needs OPENROUTER_API_KEY (Astra, Jev) and ANTHROPIC_API_KEY (Fable 5). Plot with
 # `python -m low_probs.plot`.
 set -euo pipefail
 
-MODELS="${MODELS:-openai/gpt-6-astra anthropic/claude-fable-5.1 typesafe/jev-1.13}"
+# Fable 5.1 is left out: Anthropic's API refuses most of these requests (see experiment.py).
+MODELS="${MODELS:-openai/gpt-6-astra anthropic/claude-fable-5 typesafe/jev-1.13}"
 REPEATS="${REPEATS:-1 3 5}"
 PS="${PS:-0.1 0.01 0.001}"
 EVENTS="${EVENTS:-10}"

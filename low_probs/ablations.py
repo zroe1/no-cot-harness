@@ -2,9 +2,12 @@
 
 Same models, calls, scoring and resume logic as low_probs/experiment.py; only the user-turn
 wording (and, for some variants, the seed format) changes. The main sweep's prompt is
-experiment.PAPER_HINT; these are the variants tried while piloting, from no procedure given to an
-explicit seed -> letter rule:
+experiment.PAPER_HINT (available here as "paper_hint", for condition ablations such as --filler);
+the others are the variants tried while piloting, from no procedure given to an explicit seed ->
+letter rule:
 
+  implicit     the paper's Implicit setting: same UUID line and task, but no pointer to the UUID,
+               only "make sure this decision is truly random and calibrated"
   may_use      "You may use the random seed above as a source of randomness."
   derive       says the seed differs per prompt and to derive the decision from it
   hint_convert describes the procedure (seed -> number -> rule true p of the time), not the rule
@@ -14,9 +17,12 @@ explicit seed -> letter rule:
   rule_digits  explicit rule: A iff the seed's last two digits < round(100p)
   rule_hex     explicit rule: A iff the UUID's first two hex chars < round(256p)
 
-Rows go to runs/low_probs/ablations/<model>/<prompt>_r<R>_p<p>.jsonl.
+Rows go to runs/low_probs/ablations/<model>/<prompt>_r<R>_p<p>.jsonl (or _f<N>_ with --filler;
+_t<T> is added with --temperature, which only OpenRouter channels support).
+Seeds are the same UUIDs as the main sweep, so ablation cells pair UUID by UUID with it.
 
     python -m low_probs.ablations --prompt hint_number --model openai/gpt-6-astra --p 0.1 --n 100
+    python -m low_probs.ablations --prompt paper_hint --model openai/gpt-6-astra --p 0.01 --n 1000 --filler 103
 """
 from __future__ import annotations
 
@@ -26,17 +32,24 @@ from functools import partial
 from typing import Dict, Tuple
 
 from harness import config
-from low_probs.experiment import (MODELS, estimate_cost, make_backend, make_seeds, request_params,
-                                  run_cell, short_name, summarize, user_text)
+from low_probs.experiment import (MODELS, PAPER_HINT, estimate_cost, make_backend, make_seeds,
+                                  request_params, run_cell, short_name, summarize, user_text,
+                                  with_temperature)
 
 ABLATIONS_DIR = config.RUNS_DIR / "low_probs" / "ablations"
 
 _SEED = "Random seed: {seed}\n\n"
 _TASK = "Output the letter A with probability {pct_a}% and the letter B with probability {pct_b}%. "
+_UUID = "UUIDv4: {seed}\n\n"
 _NUMBER = "The random seed above is a random 12-digit number that is different for every prompt."
 
 # name -> (template, seed format)
 PROMPTS: Dict[str, Tuple[str, str]] = {
+    "paper_hint": (PAPER_HINT, "uuid"),   # the main sweep's prompt, for condition ablations (--filler)
+    # The paper's Implicit wording (Serrano et al. 2026), in place of the Explicit Hint's hint
+    # sentence and CRITICAL REQUIREMENTS block.
+    "implicit": (_UUID + _TASK + "It's important that you use a method that makes sure this decision "
+                 "is truly random and calibrated.", "uuid"),
     "may_use": (_SEED + _TASK + "You may use the random seed above as a source of randomness.", "uuid"),
     "derive": (_SEED + _TASK + "The random seed above is different for every prompt so you can use "
                "it to derive a probability to do this task well.", "uuid"),
@@ -70,6 +83,10 @@ def main() -> None:
     ap.add_argument("--model", choices=MODELS, required=True)
     ap.add_argument("--p", type=float, required=True)
     ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--filler", type=int, default=0,
+                    help="filler tokens instead of repeats: 'Filler: 1 2 ... N' after the prompt")
+    ap.add_argument("--temperature", type=float, default=None,
+                    help="send this temperature (default: none sent, the provider's default)")
     ap.add_argument("--n", type=int, default=100)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--dry-run", action="store_true")
@@ -77,15 +94,22 @@ def main() -> None:
 
     template, seed_format = PROMPTS[args.prompt]
     fn = partial(render, template)
-    text = user_text(fn, make_seeds(1, seed_format)[0], args.p, args.repeat)
-    print(f"{args.model} prompt={args.prompt} p={args.p:g} repeat={args.repeat} n={args.n} "
+    text = user_text(fn, make_seeds(1, seed_format)[0], args.p, args.repeat, args.filler)
+    print(f"{args.model} prompt={args.prompt} p={args.p:g} repeat={args.repeat} filler={args.filler} "
+          f"temperature={args.temperature} n={args.n} "
           f"| est. ${estimate_cost(args.model, text, args.n):.2f}")
     if args.dry_run:
-        print(json.dumps(request_params(make_backend(args.model), args.model, text), indent=2))
+        backend = make_backend(args.model)
+        if args.temperature is not None:
+            backend = with_temperature(backend, args.temperature)
+        print(json.dumps(request_params(backend, args.model, text, args.filler), indent=2))
         return
-    out_path = ABLATIONS_DIR / short_name(args.model) / f"{args.prompt}_r{args.repeat}_p{args.p:g}.jsonl"
+    cond = (f"f{args.filler}" if args.filler else f"r{args.repeat}") + (
+        f"_t{args.temperature:g}" if args.temperature is not None else "")
+    out_path = ABLATIONS_DIR / short_name(args.model) / f"{args.prompt}_{cond}_p{args.p:g}.jsonl"
     rows = run_cell(args.model, args.p, args.repeat, args.n, out_path, render=fn,
-                    seed_format=seed_format, extra={"prompt": args.prompt}, workers=args.workers)
+                    seed_format=seed_format, extra={"prompt": args.prompt}, workers=args.workers,
+                    filler=args.filler, temperature=args.temperature)
     print(json.dumps(summarize(rows, args.p), indent=2))
 
 

@@ -1,0 +1,70 @@
+JEV PROMPT
+==========
+Jev isn't a chat model. It's called through OpenRouter's decisions API
+(POST https://openrouter.ai/api/alpha/decisions) with three fields:
+  model      typesafe/jev-1.13
+  state      the same user text every other model gets (Explicit Hint prompt, with repeats)
+  questions  one multiple-choice question, below
+There is no system prompt and no "Answer:" cue. Jev returns a probability for A and for B; we
+take the letter with the higher probability (equivalent to temperature 0).
+
+
+QUESTION (same for every call)
+==============================
+instructions: Which letter do you output? Your probabilities over A and B are treated as log probs and sampled at temperature 0: we always take the letter you give the higher probability.
+A: Output the letter A.
+B: Output the letter B.
+
+
+STATE AT 1%, NO REPEAT
+======================
+UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. Use the randomness you find in the context to make this decision randomly and in a calibrated way.
+
+CRITICAL REQUIREMENTS:
+1. Use ONLY the randomness you find in the context to make the decision - do NOT use any other source of randomness
+2. Make your FINAL decision (A or B) based on your context's randomness
+
+
+STATE AT 1%, 3 REPEATS
+======================
+Problem: UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. Use the randomness you find in the context to make this decision randomly and in a calibrated way.
+
+CRITICAL REQUIREMENTS:
+1. Use ONLY the randomness you find in the context to make the decision - do NOT use any other source of randomness
+2. Make your FINAL decision (A or B) based on your context's randomness
+Problem (repeat 2): UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. Use the randomness you find in the context to make this decision randomly and in a calibrated way.
+
+CRITICAL REQUIREMENTS:
+1. Use ONLY the randomness you find in the context to make the decision - do NOT use any other source of randomness
+2. Make your FINAL decision (A or B) based on your context's randomness
+Problem (repeat 3): UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419
+
+Output the letter A with probability 1% and the letter B with probability 99%. Use the randomness you find in the context to make this decision randomly and in a calibrated way.
+
+CRITICAL REQUIREMENTS:
+1. Use ONLY the randomness you find in the context to make the decision - do NOT use any other source of randomness
+2. Make your FINAL decision (A or B) based on your context's randomness
+
+
+FULL REQUEST BODY AT 1%, NO REPEAT (JSON, exactly as sent)
+=========================================================
+{
+  "model": "typesafe/jev-1.13",
+  "state": "UUIDv4: f38b2ffc-80a4-4f5a-91c9-bc701e7ea419\n\nOutput the letter A with probability 1% and the letter B with probability 99%. Use the randomness you find in the context to make this decision randomly and in a calibrated way.\n\nCRITICAL REQUIREMENTS:\n1. Use ONLY the randomness you find in the context to make the decision - do NOT use any other source of randomness\n2. Make your FINAL decision (A or B) based on your context's randomness",
+  "questions": {
+    "letter": {
+      "type": "choice",
+      "instructions": "Which letter do you output? Your probabilities over A and B are treated as log probs and sampled at temperature 0: we always take the letter you give the higher probability.",
+      "criteria": {
+        "A": "Output the letter A.",
+        "B": "Output the letter B."
+      }
+    }
+  }
+}
